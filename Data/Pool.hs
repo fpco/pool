@@ -35,6 +35,7 @@ module Data.Pool
     , takeResource
     , destroyResource
     , putResource
+    , getPoolStats
     ) where
 
 import Control.Applicative ((<$>))
@@ -106,6 +107,14 @@ data Pool a = Pool {
     , localPools :: V.Vector (LocalPool a)
     -- ^ Per-capability resource pools.
     }
+
+getPoolStats :: Pool a -> IO String
+getPoolStats Pool {..} = do
+    locals <- atomically $ V.forM localPools $ \LocalPool {..} -> do
+        u <- readTVar inUse
+        e <- readTVar entries
+        return $ "In use: " ++ show u ++ ", total entries: " ++ show (length e)
+    return $ unlines $ ("Maximum: " ++ show maxResources) : V.toList locals
 
 instance Show (Pool a) where
     show Pool{..} = "Pool {numStripes = " ++ show numStripes ++ ", " ++
